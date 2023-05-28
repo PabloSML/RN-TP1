@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import  f1_score
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Flatten, Dropout, BatchNormalization
+from tensorflow.keras.layers import Dense, Flatten, Dropout, BatchNormalization, Conv2D
 from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
@@ -80,11 +80,16 @@ def create_fmnist_model(
         y_data, 
         metrics=['accuracy','AUC','Precision','Recall'],
         loss='categorical_crossentropy',
-        hidden_units=128,
+        hidden_layers=1,
+        hidden_units=[128],
         weight_initializer='glorot_normal',
-        weight_initializer_stddev=None,
+        weight_initializer_stddev=0.001,
         optimizer='Adam',
-        learning_rate=0.0001, 
+        activation='relu',
+        learning_rate=0.0001,
+        batch_normalization=False,
+        dropout_rate=0.0, 
+        conv=False,
         train_valid_proportion=1/3,
         random_state_seed=10, 
         verbose=False
@@ -93,21 +98,29 @@ def create_fmnist_model(
         @param x_data Images to use for training and validation
         @param y_data Labels to use for training and validation
         @param metrics Metrics to use for training and validation. Default is accuracy, AUC, Precision and Recall
-        @param loss Loss function to use for training and validation. Default is categorical crossentropy
-        @param hidden_units Number of hidden units to use for training and validation. Default is 128
-        @param weight_initializer Weight initializer to use for training and validation. Default is GlorotNormal
+        @param loss Loss function to use for training. Default is categorical crossentropy
+        @param hidden_layers Number of hidden layers. Default is 1
+        @param hidden_units List of number of hidden units to use in each layer. Default is [128]
+        @param weight_initializer Weight initializer. Default is GlorotNormal
         @param weight_initializer_stddev Standard deviation to use for the weight initializer if Random Normal. Default is None
-        @param learning_rate Learning rate to use for training and validation. Default is 0.0001
+        @param optimizer Optimizer to use for training. Default is Adam
+        @param activation Activation function to use for training. Default is ReLU
+        @param learning_rate Learning rate. Default is 0.0001
+        @param batch_normalization Whether to use batch normalization or not. Default is False
+        @param dropout_rate Dropout rate. Default is 0.0
+        @param conv Whether to use convolutional layers or not. Default is False
         @param train_valid_proportion Proportion of the dataset to use for training and validation. Default is 1/3
         @param random_state_seed Seed to use for random operations. Default is 10
         @param verbose Verbosity of the model. Default is False
     """
-    # Normalize the data
-    scaler = StandardScaler()
-    x_stand = scaler.fit_transform(x_data.reshape(-1, 784)).reshape(-1, 28, 28)
+
+    if not batch_normalization:
+        # Normalize the data
+        scaler = StandardScaler()
+        x_data = scaler.fit_transform(x_data.reshape(-1, 784)).reshape(-1, 28, 28)
 
     # Split the train_valid sub-dataset into train and valid
-    x_train, x_valid, y_train, y_valid = train_test_split(x_stand, y_data, test_size=train_valid_proportion, random_state=random_state_seed, shuffle=True)
+    x_train, x_valid, y_train, y_valid = train_test_split(x_data, y_data, test_size=train_valid_proportion, random_state=random_state_seed, shuffle=True)
 
     if verbose:
         print(f"x_train Shape: {x_train.shape}")
@@ -115,29 +128,37 @@ def create_fmnist_model(
         print(f"y_train Shape: {y_train.shape}")
         print(f"y_valid Shape: {y_valid.shape}")
     
+    if weight_initializer == 'random_normal':
+        weight_initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=weight_initializer_stddev)
 
     # Softmax model
     model = Sequential()
 
+    if conv:
+        model.add(Conv2D(32, kernel_size=(3, 3), activation=activation, input_shape=(28,28,1)))
+
     model.add(Flatten(input_shape=(28,28)))
 
-    if weight_initializer == 'random_normal':
-        weight_initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=weight_initializer_stddev)
+    for i in range(hidden_layers):
+        if batch_normalization:
+            model.add(BatchNormalization())
+        model.add(Dense(hidden_units[i], activation=activation, kernel_initializer=weight_initializer))
+        if dropout_rate > 0.0:
+            model.add(Dropout(dropout_rate))
 
-    model.add(Dense(hidden_units, activation="relu", kernel_initializer=weight_initializer))
-
+    if batch_normalization:
+        model.add(BatchNormalization())
     model.add(Dense(10, activation="softmax", kernel_initializer=weight_initializer))
 
     if verbose:
         model.summary()
     metrics = metrics
-    match optimizer:
-        case 'SGD':
-            optimizer = SGD(learning_rate=learning_rate)
-        case 'Adam':
-            optimizer = Adam(learning_rate=learning_rate)
-        case _:
-            optimizer = Adam(learning_rate=learning_rate)
+    if optimizer == 'SGD':
+        optimizer = SGD(learning_rate=learning_rate)
+    elif optimizer == 'Adam':
+        optimizer = Adam(learning_rate=learning_rate)
+    elif optimizer == 'RMSprop':
+        optimizer = RMSprop(learning_rate=learning_rate)
     model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
 
     return model, x_train, x_valid, y_train, y_valid
@@ -213,12 +234,112 @@ def run_model(
     best_epoch_train_metrics['f1'] = f1_train
     best_epoch_val_metrics['f1'] = f1_val
 
+    best_epoch_train_metrics['iterations'] = earlyStopping.best_epoch*batch_size
+    best_epoch_val_metrics['iterations'] = earlyStopping.best_epoch*batch_size
+
     metrics_df = pd.DataFrame({'train': best_epoch_train_metrics, 'val': best_epoch_val_metrics}).sort_index(key=lambda x: x.str.lower())
 
     if show_metrics:
         print(metrics_df)
 
     return history, metrics_df, date_id
+
+
+def get_model_accuracies_iterations(
+    x_data,
+    y_data,
+    metrics=['accuracy'],
+    loss='categorical_crossentropy',
+    hidden_layers=1,
+    hidden_units=[512],
+    weight_initializer='glorot_normal',
+    optimizer='Adam',
+    activation='relu',
+    learning_rate=0.0001,
+    batch_normalization=False,
+    dropout_rate=0.3,
+    train_valid_proportion=1/3,
+    random_state_seed=10,
+    batch_size=32,
+    max_epochs=100,
+    es_config = {
+        'monitor': 'val_accuracy',
+        'patience': 10,
+        'mode': 'max',
+        'restore_best_weights': True
+    }        
+):
+    model, x_train, x_valid, y_train, y_valid = create_fmnist_model(
+        x_data,
+        y_data,
+        metrics=metrics,
+        loss=loss,
+        hidden_layers=hidden_layers,
+        hidden_units=hidden_units,
+        weight_initializer=weight_initializer,
+        optimizer=optimizer,
+        activation=activation,
+        learning_rate=learning_rate,
+        batch_normalization=batch_normalization,
+        dropout_rate=dropout_rate,
+        train_valid_proportion=train_valid_proportion,
+        random_state_seed=random_state_seed,
+        verbose=False
+    )
+
+    history, metrics_df, id = run_model(
+        model=model,
+        x_train=x_train,
+        x_valid=x_valid,
+        y_train=y_train,
+        y_valid=y_valid,
+        batch_size=batch_size,
+        max_epochs=max_epochs,
+        es_config = es_config,
+        show_metrics=False,
+        verbose=False
+    )
+
+    return metrics_df['train']['accuracy'], metrics_df['val']['accuracy'], metrics_df['val']['iterations']
+
+# LEARNING_RATE, BATCH_SIZE, OPTIMIZADORES, ACTIVACIONES, DROPOUT_RATE, BATCH_NORMALIZATION, INICIALIZACIONES DE PESOS
+
+def get_plot_data_vs_param(
+        x_data,
+        y_data,
+        param_name: str,
+        param_data: list,
+    ):
+    accuracies_arr = []
+    val_accuracies_arr = []
+    iterations_arr = []
+
+    for param in param_data:
+        accuracy, val_accuracy, iterations = get_model_accuracies_iterations(x_data=x_data, y_data=y_data, **{param_name: param})
+
+        accuracies_arr.append(accuracy)
+        val_accuracies_arr.append(val_accuracy)
+        iterations_arr.append(iterations)
+
+    return accuracies_arr, val_accuracies_arr, iterations_arr
+
+# def get_plot_data_vs_learning_rate(
+#     x_data,
+#     y_data,
+#     learning_rates_arr,
+# ):
+#     accuracies_arr = []
+#     val_accuracies_arr = []
+#     iterations_arr = []
+
+#     for learning_rate in learning_rates_arr:
+#         accuracy, val_accuracy, iterations = get_model_accuracies_iterations(x_data=x_data, y_data=y_data, learning_rate=learning_rate)
+
+#         accuracies_arr.append(accuracy)
+#         val_accuracies_arr.append(val_accuracy)
+#         iterations_arr.append(iterations)
+
+#     return accuracies_arr, val_accuracies_arr, iterations_arr
 
 
 def tensorboard_log(log_dir, tag, data):
