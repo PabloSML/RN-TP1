@@ -13,6 +13,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
 from datetime import datetime
+from dataclasses import dataclass
 
 # ------------------------------------------------------------------------------
 
@@ -323,24 +324,172 @@ def get_plot_data_vs_param(
 
     return accuracies_arr, val_accuracies_arr, iterations_arr
 
-# def get_plot_data_vs_learning_rate(
-#     x_data,
-#     y_data,
-#     learning_rates_arr,
-# ):
-#     accuracies_arr = []
-#     val_accuracies_arr = []
-#     iterations_arr = []
+@dataclass(frozen=True)
+class PlotData:
+    param_name: str
+    param_data: np.ndarray
+    accuracies_arr: np.ndarray
+    val_accuracies_arr: np.ndarray
+    iterations_arr: np.ndarray
 
-#     for learning_rate in learning_rates_arr:
-#         accuracy, val_accuracy, iterations = get_model_accuracies_iterations(x_data=x_data, y_data=y_data, learning_rate=learning_rate)
+def recover_plot_data():
+    plot_data = {}
+    plot_data['lr'] = PlotData('Learning Rate', *np.load('plotting_data/lr.npy'))
+    plot_data['bs'] = PlotData('Batch Size', *np.load('plotting_data/bs.npy'))
+    plot_data['opt'] = PlotData('Optimizer', *np.load('plotting_data/opt.npy'))
+    plot_data['act'] = PlotData('Activation', *np.load('plotting_data/act.npy'))
+    plot_data['dr'] = PlotData('Dropout Rate', *np.load('plotting_data/dr.npy'))
+    plot_data['bn'] = PlotData('Batch Normalization', *np.load('plotting_data/bn.npy'))
+    plot_data['wi'] = PlotData('Weight Initializer', *np.load('plotting_data/wi.npy'))
+    plot_data['loss'] = PlotData('Loss', *np.load('plotting_data/loss.npy'))
 
-#         accuracies_arr.append(accuracy)
-#         val_accuracies_arr.append(val_accuracy)
-#         iterations_arr.append(iterations)
+    return plot_data
 
-#     return accuracies_arr, val_accuracies_arr, iterations_arr
+def plot_sweep_results(metric):
+    # Recover Data from files
+    plot_data = recover_plot_data()
 
+    # Plot accuracies vs parameters in 2x4 grid with training accuracy and validation accuracy on each plot
+    plt.figure(figsize=(20,10))
+
+    # Learning Rate Plot
+    plt.subplot(2, 4, 1)
+    if metric == 'Accuracy':
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    elif metric == 'Iterations':
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
+    plt.xscale('log')
+    plt.title(f"{metric} vs {plot_data['lr'].param_name}")
+    plt.xlabel(plot_data['lr'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.minorticks_on()
+
+    # Batch Size Plot
+    plt.subplot(2, 4, 2)
+    if metric == 'Accuracy':
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    elif metric == 'Iterations':
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].iterations_arr, '-o', label='Iterations', color='darkgreen')
+    plt.xscale('log')
+    plt.title(f"{metric} vs {plot_data['bs'].param_name}")
+    plt.xlabel(plot_data['bs'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.minorticks_on()
+
+    # Optimizer Plot as a grouped bar chart
+    plt.subplot(2, 4, 3)
+    bar_width = 0.35
+    x = np.arange(len(plot_data['opt'].param_data))
+    if metric == 'Accuracy':
+        plt.bar(x - bar_width/2, np.array(plot_data['opt'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+        plt.ylim(0.8, 0.98)
+    elif metric == 'Iterations':
+        plt.bar(x, np.array(plot_data['opt'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
+    plt.xticks(x, plot_data['opt'].param_data)
+    plt.title(f"{metric} vs {plot_data['opt'].param_name}")
+    plt.xlabel(plot_data['opt'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.minorticks_on()
+    plt.grid(which='both', axis='y')
+    plt.legend()
+
+    # Activation Function Plot as a grouped bar chart
+    plt.subplot(2, 4, 4)
+    bar_width = 0.35
+    x = np.arange(len(plot_data['act'].param_data))
+    if metric == 'Accuracy':
+        plt.bar(x - bar_width/2, np.array(plot_data['act'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['act'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+        plt.ylim(0.88, 0.98)
+    elif metric == 'Iterations':
+        plt.bar(x, np.array(plot_data['act'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
+    plt.xticks(x, plot_data['act'].param_data)
+    plt.title(f"{metric} vs {plot_data['act'].param_name}")
+    plt.xlabel(plot_data['act'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.minorticks_on()
+    plt.grid(which='both', axis='y')
+    plt.legend()
+
+    # Dropout Rate Plot
+    plt.subplot(2, 4, 5)
+    if metric == 'Accuracy':
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    elif metric == 'Iterations':
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
+    plt.title(f"{metric} vs {plot_data['dr'].param_name}")
+    plt.xlabel(plot_data['dr'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.minorticks_on()
+
+    # Batch Normalization Plot as a grouped bar chart
+    plt.subplot(2, 4, 6)
+    bar_width = 0.35
+    x = np.arange(len(plot_data['bn'].param_data))
+    if metric == 'Accuracy':
+        plt.bar(x - bar_width/2, np.array(plot_data['bn'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+        plt.ylim(0.88, 0.98)
+    elif metric == 'Iterations':
+        plt.bar(x, np.array(plot_data['bn'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
+    plt.xticks(x, ['Off', 'On'])
+    plt.title(f"{metric} vs {plot_data['bn'].param_name}")
+    plt.xlabel(plot_data['bn'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.minorticks_on()
+    plt.grid(which='both', axis='y')
+    plt.legend()
+
+    # Weight Initializer Plot as a grouped bar chart
+    plt.subplot(2, 4, 7)
+    bar_width = 0.35
+    x = np.arange(len(plot_data['wi'].param_data))
+    if metric == 'Accuracy':
+        plt.bar(x - bar_width/2, np.array(plot_data['wi'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+        plt.ylim(0.88, 1.0)
+    elif metric == 'Iterations':
+        plt.bar(x, np.array(plot_data['wi'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
+    plt.xticks(x, ['glorot_n', 'glorot_u', 'rand_n', 'rand_u'])
+    plt.title(f"{metric} vs {plot_data['wi'].param_name}")
+    plt.xlabel(plot_data['wi'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.minorticks_on()
+    plt.grid(which='both', axis='y')
+    plt.legend()
+
+    # Loss Function Plot as a grouped bar chart
+    plt.subplot(2, 4, 8)
+    bar_width = 0.35
+    x = np.arange(len(plot_data['loss'].param_data))
+    if metric == 'Accuracy':
+        plt.bar(x - bar_width/2, np.array(plot_data['loss'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+        plt.ylim(0.88, 0.98)
+    elif metric == 'Iterations':
+        plt.bar(x, np.array(plot_data['loss'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
+    plt.xticks(x, plot_data['loss'].param_data)
+    plt.title(f"{metric} vs {plot_data['loss'].param_name}")
+    plt.xlabel(plot_data['loss'].param_name)
+    plt.ylabel(f"{metric}")
+    plt.minorticks_on()
+    plt.grid(which='both', axis='y')
+    plt.legend()
+
+    plt.show()
 
 def tensorboard_log(log_dir, tag, data):
     """ Log a scalar, a set of data or a time series in TensorBoard, by creating the proper log file
