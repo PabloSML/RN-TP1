@@ -89,8 +89,8 @@ def create_fmnist_model(
         activation='relu',
         learning_rate=0.0001,
         batch_normalization=False,
-        dropout_rate=0.0, 
-        conv=False,
+        dropout_rate=0.0,
+        feature_layer=False, 
         train_valid_proportion=1/3,
         random_state_seed=10, 
         verbose=False
@@ -109,7 +109,7 @@ def create_fmnist_model(
         @param learning_rate Learning rate. Default is 0.0001
         @param batch_normalization Whether to use batch normalization or not. Default is False
         @param dropout_rate Dropout rate. Default is 0.0
-        @param conv Whether to use convolutional layers or not. Default is False
+        @param feature_layer Whether to add a layer with 2 neurons right before softmax for feature extraction. Default is False
         @param train_valid_proportion Proportion of the dataset to use for training and validation. Default is 1/3
         @param random_state_seed Seed to use for random operations. Default is 10
         @param verbose Verbosity of the model. Default is False
@@ -135,9 +135,6 @@ def create_fmnist_model(
     # Softmax model
     model = Sequential()
 
-    if conv:
-        model.add(Conv2D(32, kernel_size=(3, 3), activation=activation, input_shape=(28,28,1)))
-
     model.add(Flatten(input_shape=(28,28)))
 
     for i in range(hidden_layers):
@@ -149,6 +146,10 @@ def create_fmnist_model(
 
     if batch_normalization:
         model.add(BatchNormalization())
+
+    if feature_layer:
+        model.add(Dense(2, activation='linear', kernel_initializer=weight_initializer))
+    
     model.add(Dense(10, activation="softmax", kernel_initializer=weight_initializer))
 
     if verbose:
@@ -244,7 +245,6 @@ def run_model(
         print(metrics_df)
 
     return history, metrics_df, date_id
-
 
 def get_model_accuracies_iterations(
     x_data,
@@ -489,6 +489,45 @@ def plot_sweep_results(metric):
     plt.grid(which='both', axis='y')
     plt.legend()
 
+    plt.show()
+
+def extract_features(model, data):
+    intermediate_layer_model = tf.keras.Model(inputs=model.input,
+                                              outputs=model.layers[-2].output)
+    features = intermediate_layer_model.predict(data)
+    return features
+
+def get_boundary_predictions(model):
+    x_min = -100
+    x_max = 100
+    y_min = -100
+    y_max = 100
+    num = 100
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, num), np.linspace(y_min, y_max, num))
+    points = np.column_stack((xx.flatten(), yy.flatten()))
+    auxmodel = tf.keras.Model(inputs=model.layers[-1].input, outputs=model.output)
+    predictions = np.argmax(auxmodel.predict(points), axis=1)
+
+    return xx, yy, predictions
+
+def visualize_features(features, labels, xx, yy, boundaries):
+    class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+    plt.figure(figsize=(10, 10))
+    for index, class_name in enumerate(class_names):
+        plt.scatter(features[labels == index, 0],
+                    features[labels == index, 1],
+                    label=class_name, color=plt.cm.tab10(index))
+        
+    plt.scatter(xx.flatten(), yy.flatten(), c=boundaries, alpha=0.4, cmap=plt.cm.tab10)
+
+    plt.xlim(-50,50)
+    plt.ylim(-75,75)
+    plt.grid(True)
+    plt.xlabel('h1')
+    plt.ylabel('h2')
+    plt.title('Features Visualization')
+    plt.legend()
     plt.show()
 
 def tensorboard_log(log_dir, tag, data):
