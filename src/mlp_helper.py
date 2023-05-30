@@ -19,19 +19,23 @@ from dataclasses import dataclass
 
 def load_fmnist_data():
     """ Return the Fashion MNIST dataset, with the following structure:
-        x_data: 60000x28x28 array with the images
+        x_data: 60000x28x28 array with the training images
+        x_test: 10000x28x28 array with the test images
         y_data: 60000x1 array with the labels
         class_names: 10x1 array with the class names
     """
     x_data = np.load('../AssignmentGoodies/train_images.npy')
     print(f"x data Shape: {x_data.shape}")
 
+    x_test = np.load('../AssignmentGoodies/test_images.npy')
+    print(f"x data Shape: {x_test.shape}")
+
     y_data = pd.read_csv('../AssignmentGoodies/train_labels.csv').to_numpy()[:,0]
     print(f"y data Shape: {y_data.shape}")
 
     class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
-    return x_data, y_data, class_names
+    return x_data, x_test, y_data, class_names
 
 
 def fmnist_eda_plots(x_data, y_data, class_names):
@@ -510,8 +514,7 @@ def get_boundary_predictions(model):
 
     return xx, yy, predictions
 
-def visualize_features(features, labels, xx, yy, boundaries):
-    class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+def visualize_features(features, labels, xx, yy, boundaries, class_names):
 
     plt.figure(figsize=(10, 10))
     for index, class_name in enumerate(class_names):
