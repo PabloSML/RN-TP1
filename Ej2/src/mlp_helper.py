@@ -17,66 +17,52 @@ from dataclasses import dataclass
 
 # ------------------------------------------------------------------------------
 
-def load_fmnist_data():
-    """ Return the Fashion MNIST dataset, with the following structure:
-        x_data: 60000x28x28 array with the training images
-        x_test: 10000x28x28 array with the test images
-        y_data: 60000x1 array with the labels
-        class_names: 10x1 array with the class names
-    """
-    x_data = np.load('../AssignmentGoodies/train_images.npy')
-    print(f"x data Shape: {x_data.shape}")
 
-    x_test = np.load('../AssignmentGoodies/test_images.npy')
-    print(f"x data Shape: {x_test.shape}")
-
-    y_data = pd.read_csv('../AssignmentGoodies/train_labels.csv').to_numpy()[:,0]
-    print(f"y data Shape: {y_data.shape}")
-
-    class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
-
-    return x_data, x_test, y_data, class_names
-
-
-def fmnist_eda_plots(x_data, y_data, class_names):
-    """ Plot some EDA plots for the Fashion MNIST dataset.
+def mnist_eda_plots(x_data, y_data):
+    """ Plot some EDA plots for the MNIST dataset.
         @param x_data Images to plot
         @param y_data Labels to plot
-        @param class_names Names of the classes
     """   
     # Find indexes of each class instance in y_data
     class_examples = [np.where(y_data == i) for i in range(10)]
+
+    # Print number of instances of each class
+    for i in range(10):
+        print(f"Class {i}: {len(class_examples[i][0])} instances")
 
     # Plot 3 random examples of each class
     plt.figure(figsize=(20, 6))
     for i in range(10):
         for j in range(3):
             plt.subplot(3, 10, i+1 + j*10)
-            plt.imshow(x_data[class_examples[i][0][np.random.randint(0, 6000)], ...])
+            plt.imshow(x_data[class_examples[i][0][np.random.randint(len(class_examples[i][0]))], ...])
             plt.axis('off')
-        plt.title(f'{class_names[i]}', pad=245)
+        plt.title(f'Class {i}', pad=245)
     plt.show()
 
+    print("Promedio de brillo de cada clase")
     # Plot brightness mean of each class
     plt.figure(figsize=(20, 6))
     for i in range(10):
         plt.subplot(2, 5, i+1)
         plt.imshow(np.mean(x_data[class_examples[i][0], ...], axis=0))
         plt.axis('off')
-        plt.title(f'{class_names[i]}')    
+        plt.title(f'Class {i}')    
     plt.show()
 
+
+    print("Histogramas de brillo de cada clase")
     # Plot brightness distribution of each class
     plt.figure(figsize=(20, 6))
     for i in range(10):
         plt.subplot(2, 5, i+1)
         plt.hist(np.mean(x_data[class_examples[i][0], ...], axis=(1,2)), color=plt.cm.Accent(i%8), bins=50)
         plt.grid()
-        plt.xlim(0, 255)
+        plt.xlim(0, 100)
         plt.ylim(0, 650)
         plt.minorticks_on()
         plt.tight_layout()
-        plt.title(f'{class_names[i]}')
+        plt.title(f'Class {i}') 
     plt.show()
 
 
