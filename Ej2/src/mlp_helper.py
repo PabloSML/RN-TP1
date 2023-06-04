@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib.ticker as ticker
 import pandas as pd
 
 from sklearn.model_selection import train_test_split 
@@ -18,13 +19,19 @@ from dataclasses import dataclass
 # ------------------------------------------------------------------------------
 
 
-def mnist_eda_plots(x_data, y_data):
+def mnist_eda_plots(x_data, y_data, morpho_data):
     """ Plot some EDA plots for the MNIST dataset.
         @param x_data Images to plot
         @param y_data Labels to plot
     """   
     # Find indexes of each class instance in y_data
     class_examples = [np.where(y_data == i) for i in range(10)]
+    morpho_data["digit"] = y_data
+    morpho_data['slant_deg'] = np.rad2deg(np.arctan(-morpho_data['slant']))
+
+    digit_attributes = []
+    for i in range(10):
+        digit_attributes.append(morpho_data[y_data == i])
 
     # Print number of instances of each class
     for i in range(10):
@@ -50,7 +57,6 @@ def mnist_eda_plots(x_data, y_data):
         plt.title(f'Class {i}')    
     plt.show()
 
-
     print("Histogramas de brillo de cada clase")
     # Plot brightness distribution of each class
     plt.figure(figsize=(20, 6))
@@ -65,60 +71,70 @@ def mnist_eda_plots(x_data, y_data):
         plt.title(f'Class {i}') 
     plt.show()
 
+    print("Histogramas de inclinación de cada clase")
+    # Plot slant distribution of each class
+    fig, ax = plt.subplots(2, 5, figsize=(20, 6))
+    for i in range(10):
+        ax[i//5, i%5].hist(morpho_data['slant_deg'][class_examples[i][0]], color=plt.cm.Accent(i%8), bins=50)
+        ax[i//5, i%5].grid()
+        ax[i//5, i%5].set_xlim(-45, 45)
+        ax[i//5, i%5].set_ylim(0, 300)
+        ax[i//5, i%5].minorticks_on()
+        ax[i//5, i%5].set_title(f'Class {i}')
+        ax[i//5, i%5].xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}$\degree$"))
+    plt.tight_layout()
+    plt.show()
+
+    print("Scatter entre slant y las otras variables morfológicas de cada clase")
+    digit_attributes_labels = ['area', 'length', 'thickness', 'width', 'height']
+    digit_attributes = []
+    for i in range(10):
+        digit_attributes.append(morpho_data[y_data == i])
+
+    plt.figure(figsize=(20,16))
+    for i in range(10):
+        plt.subplot(5, 2, i+1)
+        plt.tight_layout()
+        for k in range(len(digit_attributes_labels)):
+            a = plt.scatter(x = digit_attributes[i]['slant'].values / np.max(digit_attributes[i]['slant'].values),
+                            y = digit_attributes[i][digit_attributes_labels[k]].values / np.max(digit_attributes[i][digit_attributes_labels[k]].values),
+                            label = digit_attributes_labels[k],
+                            alpha = 0.1)
+        plt.title("Class " + str(i))
+        plt.grid(True)
+        plt.legend()
+    plt.show()
+
 
 def create_fmnist_model(
-        x_data, 
-        y_data, 
-        metrics=['accuracy','AUC','Precision','Recall'],
-        loss='categorical_crossentropy',
-        hidden_layers=1,
-        hidden_units=[128],
+        metrics=['mae'],
+        loss='mae',
+        hidden_layers=3,
+        hidden_units=[512, 64, 64],
         weight_initializer='glorot_normal',
         weight_initializer_stddev=0.001,
-        optimizer='Adam',
-        activation='relu',
+        optimizer='Nadam',
+        activation='sigmoid',
         learning_rate=0.0001,
-        batch_normalization=False,
+        batch_normalization=True,
         dropout_rate=0.0,
-        feature_layer=False, 
-        train_valid_proportion=1/3,
-        random_state_seed=10, 
         verbose=False
 ):
-    """ Create a Softmax model for the Fashion MNIST dataset and return it, along with the train and valid datasets.
-        @param x_data Images to use for training and validation
-        @param y_data Labels to use for training and validation
-        @param metrics Metrics to use for training and validation. Default is accuracy, AUC, Precision and Recall
-        @param loss Loss function to use for training. Default is categorical crossentropy
-        @param hidden_layers Number of hidden layers. Default is 1
-        @param hidden_units List of number of hidden units to use in each layer. Default is [128]
+    """ Create a Softmax model for the Fashion MNIST dataset and return it
+        @param metrics Metrics to use for training and validation. Default is mae
+        @param loss Loss function to use for training. Default is mae
+        @param hidden_layers Number of hidden layers. Default is 3
+        @param hidden_units List of number of hidden units to use in each layer. Default is [512, 64, 64]
         @param weight_initializer Weight initializer. Default is GlorotNormal
         @param weight_initializer_stddev Standard deviation to use for the weight initializer if Random Normal. Default is None
-        @param optimizer Optimizer to use for training. Default is Adam
-        @param activation Activation function to use for training. Default is ReLU
+        @param optimizer Optimizer to use for training. Default is Nadam
+        @param activation Activation function to use for training. Default is sigmoid
         @param learning_rate Learning rate. Default is 0.0001
-        @param batch_normalization Whether to use batch normalization or not. Default is False
+        @param batch_normalization Whether to use batch normalization or not. Default is True
         @param dropout_rate Dropout rate. Default is 0.0
-        @param feature_layer Whether to add a layer with 2 neurons right before softmax for feature extraction. Default is False
-        @param train_valid_proportion Proportion of the dataset to use for training and validation. Default is 1/3
-        @param random_state_seed Seed to use for random operations. Default is 10
         @param verbose Verbosity of the model. Default is False
     """
 
-    if not batch_normalization:
-        # Normalize the data
-        scaler = StandardScaler()
-        x_data = scaler.fit_transform(x_data.reshape(-1, 784)).reshape(-1, 28, 28)
-
-    # Split the train_valid sub-dataset into train and valid
-    x_train, x_valid, y_train, y_valid = train_test_split(x_data, y_data, test_size=train_valid_proportion, random_state=random_state_seed, shuffle=True)
-
-    if verbose:
-        print(f"x_train Shape: {x_train.shape}")
-        print(f"x_valid Shape: {x_valid.shape}")
-        print(f"y_train Shape: {y_train.shape}")
-        print(f"y_valid Shape: {y_valid.shape}")
-    
     if weight_initializer == 'random_normal':
         weight_initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=weight_initializer_stddev)
 
@@ -132,15 +148,12 @@ def create_fmnist_model(
             model.add(BatchNormalization())
         model.add(Dense(hidden_units[i], activation=activation, kernel_initializer=weight_initializer))
         if dropout_rate > 0.0:
-            model.add(Dropout(dropout_rate))
+            model.add(Dropout(dropout_rate/(i+1)))
 
     if batch_normalization:
         model.add(BatchNormalization())
-
-    if feature_layer:
-        model.add(Dense(2, activation='linear', kernel_initializer=weight_initializer))
     
-    model.add(Dense(10, activation="softmax", kernel_initializer=weight_initializer))
+    model.add(Dense(1, activation="linear", kernel_initializer=weight_initializer))
 
     if verbose:
         model.summary()
@@ -148,7 +161,7 @@ def create_fmnist_model(
     if optimizer == 'SGD':
         optimizer = SGD(learning_rate=learning_rate)
     elif optimizer == 'Adam':
-        optimizer = Adam(learning_rate=learning_rate)
+        optimizer = Adam(learning_rate=learning_rate, beta_1=0.95, beta_2=0.999)
     elif optimizer == 'Nadam':
         optimizer = Nadam(learning_rate=learning_rate, beta_1=0.94, beta_2=0.999)
     elif optimizer == 'RMSprop':
@@ -156,7 +169,7 @@ def create_fmnist_model(
 
     model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
 
-    return model, x_train, x_valid, y_train, y_valid
+    return model
 
 def run_model(
         model,
@@ -166,6 +179,7 @@ def run_model(
         y_valid,
         batch_size=32,
         max_epochs=100,
+        batch_normalization=True,
         reduce_lr_config = {
             'monitor': 'val_accuracy',
             'factor': 0.2,
@@ -194,21 +208,26 @@ def run_model(
         @param show_metrics Show metrics of the model. Default is False
         @param verbose Verbosity of the model. Default is False
     """
-    train_size = x_train.shape[0]
-    valid_size = x_valid.shape[0]
 
-    # Make sparce label vectors
-    y_sparse_train = np.zeros([train_size,10])
-    y_sparse_valid = np.zeros([valid_size,10])
-    for idx in range(train_size):
-        y_sparse_train[idx,y_train[idx]] = 1
-    for idx in range(valid_size):
-        y_sparse_valid[idx,y_valid[idx]] = 1    
+    if not batch_normalization:
+        # Normalize the data
+        scaler = StandardScaler()
+        x_data = scaler.fit_transform(x_data.reshape(-1, 784)).reshape(-1, 28, 28)
+        x_valid = scaler.transform(x_valid.reshape(-1, 784)).reshape(-1, 28, 28)
+
+    if verbose:
+        print(f"x_train Shape: {x_train.shape}")
+        print(f"x_test Shape: {x_valid.shape}")
+        print(f"y_train Shape: {y_train.shape}")
+        print(f"y_test Shape: {y_valid.shape}")
+
+    # y_sparse_train = tf.keras.utils.to_categorical(y_train, 10)
+    # y_sparse_valid = tf.keras.utils.to_categorical(y_valid, 10)  
 
     date_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Configuring TensorBoard to log learning process
-    log_dir = "logs/mlp/fit/" + date_id
+    log_dir = "../logs/mlp/fit/" + date_id
 
     # Callback to reduce LR if we find a plateau in validation accuracy
     reduceLr = tf.keras.callbacks.ReduceLROnPlateau(monitor=reduce_lr_config['monitor'], 
@@ -226,8 +245,8 @@ def run_model(
     tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     history = model.fit(x=x_train,
-                        y=y_sparse_train,
-                        validation_data=(x_valid, y_sparse_valid),
+                        y=y_train,
+                        validation_data=(x_valid, y_valid),
                         batch_size=batch_size,
                         epochs=max_epochs,
                         callbacks=[reduceLr, earlyStopping, tensorboard_callback],
@@ -236,12 +255,6 @@ def run_model(
 
     best_epoch_train_metrics = {metric: history.history[metric][earlyStopping.best_epoch] for metric in history.history.keys() if not metric.startswith('val_')}
     best_epoch_val_metrics = {metric.removeprefix('val_'): history.history[metric][earlyStopping.best_epoch] for metric in history.history.keys() if metric.startswith('val_')}
-
-    f1_train = f1_score(y_train, clasify_maxprob(model.predict(x_train, verbose=False, use_multiprocessing=True)), average='macro')
-    f1_val = f1_score(y_valid, clasify_maxprob(model.predict(x_valid, verbose=False, use_multiprocessing=True)), average='macro')
-
-    best_epoch_train_metrics['f1'] = f1_train
-    best_epoch_val_metrics['f1'] = f1_val
 
     best_epoch_train_metrics['iterations'] = earlyStopping.best_epoch*batch_size
     best_epoch_val_metrics['iterations'] = earlyStopping.best_epoch*batch_size
@@ -253,56 +266,53 @@ def run_model(
 
     return history, metrics_df, date_id
 
-def get_model_accuracies_iterations(
-    x_data,
-    y_data,
-    metrics=['accuracy'],
-    loss='categorical_crossentropy',
+def get_model_maes_iterations(
+    x_train,
+    x_valid,
+    y_train,
+    y_valid,
+    metrics=['mae'],
+    loss='mae',
     hidden_layers=3,
     hidden_units=[512, 64, 64],
     weight_initializer='glorot_normal',
-    optimizer='Nadam',
+    optimizer='Adam',
+    activation='sigmoid',
     learning_rate=0.001,
-    activation='elu',
     batch_normalization=True,
-    dropout_rate=0.3,
-    train_valid_proportion=1/3,
-    random_state_seed=10,
-    batch_size=64,
+    dropout_rate=0.1,
+    batch_size=256,
     max_epochs=100,
     reduce_lr_config = {
-            'monitor': 'val_accuracy',
+            'monitor': 'val_mae',
             'factor': 0.2,
             'patience': 5,
             'min_lr': 0.00005
     },
     es_config = {
-        'monitor': 'val_accuracy',
+        'monitor': 'val_mae',
         'patience': 10,
-        'mode': 'max',
+        'mode': 'min',
         'restore_best_weights': True,
-        'min_delta': 0.003
+        'min_delta': 0.0
     }       
 ):
-    model, x_train, x_valid, y_train, y_valid = create_fmnist_model(
-        x_data,
-        y_data,
+    model = create_fmnist_model(
         metrics=metrics,
         loss=loss,
         hidden_layers=hidden_layers,
         hidden_units=hidden_units,
         weight_initializer=weight_initializer,
+        weight_initializer_stddev=0.001,
         optimizer=optimizer,
         activation=activation,
         learning_rate=learning_rate,
         batch_normalization=batch_normalization,
         dropout_rate=dropout_rate,
-        train_valid_proportion=train_valid_proportion,
-        random_state_seed=random_state_seed,
         verbose=False
     )
 
-    history, metrics_df, id = run_model(
+    history, metrics_df, date_id = run_model(
         model=model,
         x_train=x_train,
         x_valid=x_valid,
@@ -316,35 +326,37 @@ def get_model_accuracies_iterations(
         verbose=False
     )
 
-    return metrics_df['train']['accuracy'], metrics_df['val']['accuracy'], metrics_df['val']['iterations']
+    return metrics_df['train']['mae'], metrics_df['val']['mae'], metrics_df['val']['iterations']
 
 # LEARNING_RATE, BATCH_SIZE, OPTIMIZADORES, ACTIVACIONES, DROPOUT_RATE, BATCH_NORMALIZATION, INICIALIZACIONES DE PESOS
 
 def get_plot_data_vs_param(
-        x_data,
-        y_data,
+        x_train,
+        x_valid,
+        y_train,
+        y_valid,
         param_name: str,
         param_data: list,
     ):
-    accuracies_arr = []
-    val_accuracies_arr = []
+    maes_arr = []
+    val_maes_arr = []
     iterations_arr = []
 
     for param in param_data:
-        accuracy, val_accuracy, iterations = get_model_accuracies_iterations(x_data=x_data, y_data=y_data, **{param_name: param})
+        mae, val_mae, iterations = get_model_maes_iterations(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid, **{param_name: param})
 
-        accuracies_arr.append(accuracy)
-        val_accuracies_arr.append(val_accuracy)
+        maes_arr.append(mae)
+        val_maes_arr.append(val_mae)
         iterations_arr.append(iterations)
 
-    return accuracies_arr, val_accuracies_arr, iterations_arr
+    return maes_arr, val_maes_arr, iterations_arr
 
 @dataclass(frozen=True)
 class PlotData:
     param_name: str
     param_data: np.ndarray
-    accuracies_arr: np.ndarray
-    val_accuracies_arr: np.ndarray
+    maes_arr: np.ndarray
+    val_maes_arr: np.ndarray
     iterations_arr: np.ndarray
 
 def recover_plot_data(dir='plotting_data'):
@@ -364,14 +376,14 @@ def plot_sweep_results(metric, dir='plotting_data'):
     # Recover Data from files
     plot_data = recover_plot_data(dir=dir)
 
-    # Plot accuracies vs parameters in 2x4 grid with training accuracy and validation accuracy on each plot
+    # Plot maes vs parameters in 2x4 grid with training mae and validation mae on each plot
     plt.figure(figsize=(20,10))
 
     # Learning Rate Plot
     plt.subplot(2, 4, 1)
-    if metric == 'Accuracy':
-        plt.plot(plot_data['lr'].param_data, plot_data['lr'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
-        plt.plot(plot_data['lr'].param_data, plot_data['lr'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].accuracies_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['lr'].param_data, plot_data['lr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.xscale('log')
@@ -385,9 +397,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
 
     # Batch Size Plot
     plt.subplot(2, 4, 2)
-    if metric == 'Accuracy':
-        plt.plot(plot_data['bs'].param_data, plot_data['bs'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
-        plt.plot(plot_data['bs'].param_data, plot_data['bs'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].accuracies_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['bs'].param_data, plot_data['bs'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.xscale('log')
@@ -403,9 +415,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.subplot(2, 4, 3)
     bar_width = 0.35
     x = np.arange(len(plot_data['opt'].param_data))
-    if metric == 'Accuracy':
-        plt.bar(x - bar_width/2, np.array(plot_data['opt'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.bar(x - bar_width/2, np.array(plot_data['opt'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
         plt.ylim(0.8, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['opt'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
@@ -421,9 +433,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.subplot(2, 4, 4)
     bar_width = 0.35
     x = np.arange(len(plot_data['act'].param_data))
-    if metric == 'Accuracy':
-        plt.bar(x - bar_width/2, np.array(plot_data['act'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['act'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.bar(x - bar_width/2, np.array(plot_data['act'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['act'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
         plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['act'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
@@ -437,9 +449,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
 
     # Dropout Rate Plot
     plt.subplot(2, 4, 5)
-    if metric == 'Accuracy':
-        plt.plot(plot_data['dr'].param_data, plot_data['dr'].accuracies_arr, '-o', label='Training Accuracy', color='blue')
-        plt.plot(plot_data['dr'].param_data, plot_data['dr'].val_accuracies_arr, '-o', label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].accuracies_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['dr'].param_data, plot_data['dr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.title(f"{metric} vs {plot_data['dr'].param_name}")
@@ -454,9 +466,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.subplot(2, 4, 6)
     bar_width = 0.35
     x = np.arange(len(plot_data['bn'].param_data))
-    if metric == 'Accuracy':
-        plt.bar(x - bar_width/2, np.array(plot_data['bn'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.bar(x - bar_width/2, np.array(plot_data['bn'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
         plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['bn'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
@@ -472,9 +484,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.subplot(2, 4, 7)
     bar_width = 0.35
     x = np.arange(len(plot_data['wi'].param_data))
-    if metric == 'Accuracy':
-        plt.bar(x - bar_width/2, np.array(plot_data['wi'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.bar(x - bar_width/2, np.array(plot_data['wi'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
         plt.ylim(0.88, 1.0)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['wi'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
@@ -490,9 +502,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.subplot(2, 4, 8)
     bar_width = 0.35
     x = np.arange(len(plot_data['loss'].param_data))
-    if metric == 'Accuracy':
-        plt.bar(x - bar_width/2, np.array(plot_data['loss'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
+    if metric == 'MAE':
+        plt.bar(x - bar_width/2, np.array(plot_data['loss'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
         plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['loss'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
