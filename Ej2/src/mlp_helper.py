@@ -181,17 +181,17 @@ def run_model(
         max_epochs=100,
         batch_normalization=True,
         reduce_lr_config = {
-            'monitor': 'val_accuracy',
+            'monitor': 'val_mae',
             'factor': 0.2,
             'patience': 5,
             'min_lr': 0.00005
         },
         es_config = {
-            'monitor': 'val_accuracy',
+            'monitor': 'val_mae',
             'patience': 10,
-            'mode': 'max',
+            'mode': 'min',
             'restore_best_weights': True,
-            'min_delta': 0.007
+            'min_delta': 0.0
         },
         show_metrics=False,
         verbose=False
