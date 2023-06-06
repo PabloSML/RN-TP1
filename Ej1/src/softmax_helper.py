@@ -212,23 +212,6 @@ def run_model(
 
     return history, metrics_df, date_id
 
-
-def tensorboard_log(log_dir, tag, data):
-    """ Log a scalar, a set of data or a time series in TensorBoard, by creating the proper log file
-        in the logging directory, using the given tag and data.
-        @param log_dir Logging directory where the TensorBoard file is created
-        @param tag Tag used to group type of data or plots
-        @param data Data to plot
-    """
-    # Create a file writer for TensorBoard logs
-    file_writer = tf.summary.create_file_writer(log_dir)
-    file_writer.set_as_default()
-
-    # Send to TensorBoard both results
-    for i in range(len(data)):
-        tf.summary.scalar(tag, data=data[i], step=i)
-        file_writer.flush()
-
 def clasify_maxprob(vector):
     """ Return a vector with predicted labels, based on the maximum probability of each element.
     @param vector Vector with probabilities

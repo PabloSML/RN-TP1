@@ -221,9 +221,6 @@ def run_model(
         print(f"y_train Shape: {y_train.shape}")
         print(f"y_test Shape: {y_valid.shape}")
 
-    # y_sparse_train = tf.keras.utils.to_categorical(y_train, 10)
-    # y_sparse_valid = tf.keras.utils.to_categorical(y_valid, 10)  
-
     date_id = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Configuring TensorBoard to log learning process
@@ -382,8 +379,8 @@ def plot_sweep_results(metric, dir='plotting_data'):
     # Learning Rate Plot
     plt.subplot(2, 4, 1)
     if metric == 'MAE':
-        plt.plot(plot_data['lr'].param_data, plot_data['lr'].accuracies_arr, '-o', label='Training MAE', color='blue')
-        plt.plot(plot_data['lr'].param_data, plot_data['lr'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].maes_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['lr'].param_data, plot_data['lr'].val_maes_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['lr'].param_data, plot_data['lr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.xscale('log')
@@ -398,8 +395,8 @@ def plot_sweep_results(metric, dir='plotting_data'):
     # Batch Size Plot
     plt.subplot(2, 4, 2)
     if metric == 'MAE':
-        plt.plot(plot_data['bs'].param_data, plot_data['bs'].accuracies_arr, '-o', label='Training MAE', color='blue')
-        plt.plot(plot_data['bs'].param_data, plot_data['bs'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].maes_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['bs'].param_data, plot_data['bs'].val_maes_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['bs'].param_data, plot_data['bs'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.xscale('log')
@@ -416,9 +413,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     bar_width = 0.35
     x = np.arange(len(plot_data['opt'].param_data))
     if metric == 'MAE':
-        plt.bar(x - bar_width/2, np.array(plot_data['opt'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
-        plt.ylim(0.8, 0.98)
+        plt.bar(x - bar_width/2, np.array(plot_data['opt'].maes_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_maes_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
+        #plt.ylim(0.8, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['opt'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['opt'].param_data)
@@ -434,9 +431,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     bar_width = 0.35
     x = np.arange(len(plot_data['act'].param_data))
     if metric == 'MAE':
-        plt.bar(x - bar_width/2, np.array(plot_data['act'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['act'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.bar(x - bar_width/2, np.array(plot_data['act'].maes_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['act'].val_maes_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
+        #plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['act'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['act'].param_data)
@@ -450,8 +447,8 @@ def plot_sweep_results(metric, dir='plotting_data'):
     # Dropout Rate Plot
     plt.subplot(2, 4, 5)
     if metric == 'MAE':
-        plt.plot(plot_data['dr'].param_data, plot_data['dr'].accuracies_arr, '-o', label='Training MAE', color='blue')
-        plt.plot(plot_data['dr'].param_data, plot_data['dr'].val_accuracies_arr, '-o', label='Validation MAE', color='red')
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].maes_arr, '-o', label='Training MAE', color='blue')
+        plt.plot(plot_data['dr'].param_data, plot_data['dr'].val_maes_arr, '-o', label='Validation MAE', color='red')
     elif metric == 'Iterations':
         plt.plot(plot_data['dr'].param_data, plot_data['dr'].iterations_arr, '-o', label='Iterations', color='darkgreen')
     plt.title(f"{metric} vs {plot_data['dr'].param_name}")
@@ -467,9 +464,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     bar_width = 0.35
     x = np.arange(len(plot_data['bn'].param_data))
     if metric == 'MAE':
-        plt.bar(x - bar_width/2, np.array(plot_data['bn'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.bar(x - bar_width/2, np.array(plot_data['bn'].maes_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_maes_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
+        #plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['bn'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, ['Off', 'On'])
@@ -485,9 +482,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     bar_width = 0.35
     x = np.arange(len(plot_data['wi'].param_data))
     if metric == 'MAE':
-        plt.bar(x - bar_width/2, np.array(plot_data['wi'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
-        plt.ylim(0.88, 1.0)
+        plt.bar(x - bar_width/2, np.array(plot_data['wi'].maes_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_maes_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
+        #plt.ylim(0.88, 1.0)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['wi'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, ['glorot_n', 'glorot_u', 'rand_n', 'rand_u'])
@@ -503,9 +500,9 @@ def plot_sweep_results(metric, dir='plotting_data'):
     bar_width = 0.35
     x = np.arange(len(plot_data['loss'].param_data))
     if metric == 'MAE':
-        plt.bar(x - bar_width/2, np.array(plot_data['loss'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
-        plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.bar(x - bar_width/2, np.array(plot_data['loss'].maes_arr, dtype=np.float32).round(4), bar_width, label='Training MAE', color='blue')
+        plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_maes_arr, dtype=np.float32).round(4), bar_width, label='Validation MAE', color='red')
+        #plt.ylim(0.88, 0.98)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['loss'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['loss'].param_data)
@@ -517,67 +514,3 @@ def plot_sweep_results(metric, dir='plotting_data'):
     plt.legend()
 
     plt.show()
-
-def extract_features(model, data):
-    intermediate_layer_model = tf.keras.Model(inputs=model.input,
-                                              outputs=model.layers[-2].output)
-    features = intermediate_layer_model.predict(data)
-    return features
-
-def get_boundary_predictions(model):
-    x_min = -100
-    x_max = 100
-    y_min = -100
-    y_max = 100
-    num = 100
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, num), np.linspace(y_min, y_max, num))
-    points = np.column_stack((xx.flatten(), yy.flatten()))
-    auxmodel = tf.keras.Model(inputs=model.layers[-1].input, outputs=model.output)
-    predictions = np.argmax(auxmodel.predict(points), axis=1)
-
-    return xx, yy, predictions
-
-def visualize_features(features, labels, xx, yy, boundaries, class_names):
-
-    plt.figure(figsize=(10, 10))
-    for index, class_name in enumerate(class_names):
-        plt.scatter(features[labels == index, 0],
-                    features[labels == index, 1],
-                    label=class_name, color=plt.cm.tab10(index))
-        
-    plt.scatter(xx.flatten(), yy.flatten(), c=boundaries, alpha=0.4, cmap=plt.cm.tab10)
-
-    plt.xlim(-50,50)
-    plt.ylim(-75,75)
-    plt.grid(True)
-    plt.xlabel('h1')
-    plt.ylabel('h2')
-    plt.title('Features Visualization')
-    plt.legend()
-    plt.show()
-
-def tensorboard_log(log_dir, tag, data):
-    """ Log a scalar, a set of data or a time series in TensorBoard, by creating the proper log file
-        in the logging directory, using the given tag and data.
-        @param log_dir Logging directory where the TensorBoard file is created
-        @param tag Tag used to group type of data or plots
-        @param data Data to plot
-    """
-    # Create a file writer for TensorBoard logs
-    file_writer = tf.summary.create_file_writer(log_dir)
-    file_writer.set_as_default()
-
-    # Send to TensorBoard both results
-    for i in range(len(data)):
-        tf.summary.scalar(tag, data=data[i], step=i)
-        file_writer.flush()
-
-def clasify_maxprob(vector):
-    """ Return a vector with predicted labels, based on the maximum probability of each element.
-    @param vector Vector with probabilities
-    """
-    rounded_vector = []
-    for prediction in vector:
-        rounded_vector.append(np.argmax(prediction))
-
-    return np.array(rounded_vector)

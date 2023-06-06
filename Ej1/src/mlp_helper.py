@@ -164,7 +164,7 @@ def create_fmnist_model(
     elif optimizer == 'Adam':
         optimizer = Adam(learning_rate=learning_rate)
     elif optimizer == 'Nadam':
-        optimizer = Nadam(learning_rate=learning_rate, beta_1=0.94, beta_2=0.999)
+        optimizer = Nadam(learning_rate=learning_rate, beta_1=0.96, beta_2=0.999)
     elif optimizer == 'RMSprop':
         optimizer = RMSprop(learning_rate=learning_rate)
 
@@ -363,14 +363,14 @@ class PlotData:
 
 def recover_plot_data(dir='plotting_data'):
     plot_data = {}
-    plot_data['lr'] = PlotData('Learning Rate', *np.load(f'{dir}/lr.npy'))
-    plot_data['bs'] = PlotData('Batch Size', *np.load(f'{dir}/bs.npy'))
-    plot_data['opt'] = PlotData('Optimizer', *np.load(f'{dir}/opt.npy'))
-    plot_data['act'] = PlotData('Activation', *np.load(f'{dir}/act.npy'))
-    plot_data['dr'] = PlotData('Dropout Rate', *np.load(f'{dir}/dr.npy'))
-    plot_data['bn'] = PlotData('Batch Normalization', *np.load(f'{dir}/bn.npy'))
-    plot_data['wi'] = PlotData('Weight Initializer', *np.load(f'{dir}/wi.npy'))
-    plot_data['loss'] = PlotData('Loss', *np.load(f'{dir}/loss.npy'))
+    plot_data['lr'] = PlotData('Learning Rate', *np.load(f'../{dir}/lr.npy'))
+    plot_data['bs'] = PlotData('Batch Size', *np.load(f'../{dir}/bs.npy'))
+    plot_data['opt'] = PlotData('Optimizer', *np.load(f'../{dir}/opt.npy'))
+    plot_data['act'] = PlotData('Activation', *np.load(f'../{dir}/act.npy'))
+    plot_data['dr'] = PlotData('Dropout Rate', *np.load(f'../{dir}/dr.npy'))
+    plot_data['bn'] = PlotData('Batch Normalization', *np.load(f'../{dir}/bn.npy'))
+    plot_data['wi'] = PlotData('Weight Initializer', *np.load(f'../{dir}/wi.npy'))
+    plot_data['loss'] = PlotData('Loss', *np.load(f'../{dir}/loss.npy'))
 
     return plot_data
 
@@ -420,7 +420,7 @@ def plot_sweep_results(metric, dir='plotting_data'):
     if metric == 'Accuracy':
         plt.bar(x - bar_width/2, np.array(plot_data['opt'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
         plt.bar(x + bar_width/2, np.array(plot_data['opt'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
-        plt.ylim(0.8, 0.98)
+        plt.ylim(0.8, 0.96)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['opt'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['opt'].param_data)
@@ -438,7 +438,7 @@ def plot_sweep_results(metric, dir='plotting_data'):
     if metric == 'Accuracy':
         plt.bar(x - bar_width/2, np.array(plot_data['act'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
         plt.bar(x + bar_width/2, np.array(plot_data['act'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.ylim(0.86, 0.96)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['act'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['act'].param_data)
@@ -471,7 +471,7 @@ def plot_sweep_results(metric, dir='plotting_data'):
     if metric == 'Accuracy':
         plt.bar(x - bar_width/2, np.array(plot_data['bn'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
         plt.bar(x + bar_width/2, np.array(plot_data['bn'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.ylim(0.86, 0.96)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['bn'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, ['Off', 'On'])
@@ -489,7 +489,7 @@ def plot_sweep_results(metric, dir='plotting_data'):
     if metric == 'Accuracy':
         plt.bar(x - bar_width/2, np.array(plot_data['wi'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
         plt.bar(x + bar_width/2, np.array(plot_data['wi'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
-        plt.ylim(0.88, 1.0)
+        plt.ylim(0.88, 0.96)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['wi'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, ['glorot_n', 'glorot_u', 'rand_n', 'rand_u'])
@@ -507,7 +507,7 @@ def plot_sweep_results(metric, dir='plotting_data'):
     if metric == 'Accuracy':
         plt.bar(x - bar_width/2, np.array(plot_data['loss'].accuracies_arr, dtype=np.float32).round(4), bar_width, label='Training Accuracy', color='blue')
         plt.bar(x + bar_width/2, np.array(plot_data['loss'].val_accuracies_arr, dtype=np.float32).round(4), bar_width, label='Validation Accuracy', color='red')
-        plt.ylim(0.88, 0.98)
+        plt.ylim(0.86, 0.96)
     elif metric == 'Iterations':
         plt.bar(x, np.array(plot_data['loss'].iterations_arr, dtype=np.float32).round(4), bar_width, label='Iterations', color='darkgreen')
     plt.xticks(x, plot_data['loss'].param_data)
@@ -557,22 +557,6 @@ def visualize_features(features, labels, xx, yy, boundaries, class_names):
     plt.title('Features Visualization')
     plt.legend()
     plt.show()
-
-def tensorboard_log(log_dir, tag, data):
-    """ Log a scalar, a set of data or a time series in TensorBoard, by creating the proper log file
-        in the logging directory, using the given tag and data.
-        @param log_dir Logging directory where the TensorBoard file is created
-        @param tag Tag used to group type of data or plots
-        @param data Data to plot
-    """
-    # Create a file writer for TensorBoard logs
-    file_writer = tf.summary.create_file_writer(log_dir)
-    file_writer.set_as_default()
-
-    # Send to TensorBoard both results
-    for i in range(len(data)):
-        tf.summary.scalar(tag, data=data[i], step=i)
-        file_writer.flush()
 
 def clasify_maxprob(vector):
     """ Return a vector with predicted labels, based on the maximum probability of each element.
